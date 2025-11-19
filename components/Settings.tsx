@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { BusinessProfile, ServicePackage } from '../types';
 import { BriefcaseIcon, SparklesIcon, PackageIcon, PlusIcon, TrashIcon, GlobeAltIcon, UserCircleIcon, InstagramIcon, ShareIcon, ExternalLinkIcon, ChatBubbleLeftRightIcon, ArrowRightOnRectangleIcon, CloudArrowUpIcon } from './icons';
 import PublicSiteView from './PublicSiteView';
+import { isSupabaseConfigured } from '../src/lib/supabase';
 
 interface SettingsProps {
   profile: BusinessProfile;
@@ -106,6 +107,11 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Configurações</h2>
         <div className="flex items-center space-x-2">
+            <div className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border flex items-center ${isSupabaseConfigured ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' : 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'}`}>
+                <div className={`w-2 h-2 rounded-full mr-1.5 ${isSupabaseConfigured ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                {isSupabaseConfigured ? 'Nuvem' : 'Local'}
+            </div>
+
             {isSaved && activeTab !== 'services' && (
             <span className="text-green-400 text-xs font-bold animate-pulse bg-green-400/10 px-2 py-1 rounded-full">
                 Salvo!
