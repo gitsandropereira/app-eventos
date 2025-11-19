@@ -11,7 +11,8 @@ import EventDetail from './components/EventDetail';
 import Auth from './components/Auth';
 import { useMockData } from './hooks/useMockData';
 import { authService } from './services/authService';
-import { CogIcon, BellIcon, EyeIcon, EyeSlashIcon, SunIcon, MoonIcon } from './components/icons';
+import { supabase, isSupabaseConfigured } from './src/lib/supabase';
+import { CogIcon, BellIcon, EyeIcon, EyeSlashIcon, SunIcon, MoonIcon, ExclamationTriangleIcon } from './components/icons';
 import { Proposal, Client, Event, ProposalStatus, User } from './types';
 
 type View = 'dashboard' | 'proposals' | 'agenda' | 'clients' | 'finance' | 'settings';
@@ -29,19 +30,34 @@ const App: React.FC = () => {
       return (saved as Theme) || 'dark';
   });
   
-  // State for Magic Proposal
   const [draftProposal, setDraftProposal] = useState<Partial<Proposal> | undefined>(undefined);
 
-  // Check for active session on mount
   useEffect(() => {
-      const currentUser = authService.getCurrentUser();
-      if (currentUser) {
+      // 1. Check active session
+      authService.getCurrentUser().then(currentUser => {
           setUser(currentUser);
+          setLoading(false);
+      });
+
+      // 2. Listen for auth changes (Only works if Supabase is configured)
+      if (isSupabaseConfigured) {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+              if (session?.user) {
+                  setUser({
+                      id: session.user.id,
+                      name: session.user.user_metadata.name || 'Usuário',
+                      email: session.user.email || ''
+                  });
+              } else {
+                  // Do not auto logout if in demo mode as session is manual
+                  if (isSupabaseConfigured) setUser(null);
+              }
+          });
+          return () => subscription.unsubscribe();
       }
-      setLoading(false);
   }, []);
 
-  // Apply theme to HTML
+  // Apply theme
   useEffect(() => {
       const root = window.document.documentElement;
       if (theme === 'dark') {
@@ -57,34 +73,19 @@ const App: React.FC = () => {
   };
 
   const { 
-    proposals, 
-    kpis, 
-    events, 
-    clients, 
-    businessProfile,
-    transactions,
-    notifications,
-    historicalRevenue,
-    suppliers,
-    setProposals, 
-    setClients,
-    setBusinessProfile,
-    updateTransactionStatus,
-    markNotificationRead,
-    toggleEventTask,
-    updateMonthlyGoal,
-    addEventCost,
-    deleteEventCost,
-    addSupplier,
-    deleteSupplier
-  } = useMockData(user?.id); // Pass userId to hook
+    proposals, kpis, events, clients, businessProfile, transactions, notifications, historicalRevenue, suppliers,
+    setProposals, setClients, setBusinessProfile, updateTransactionStatus, markNotificationRead, toggleEventTask,
+    updateMonthlyGoal, addEventCost, deleteEventCost, addSupplier, deleteSupplier
+  } = useMockData(user?.id);
 
-  // Calculate all scheduled commitments (Operational Events + Closed Proposals)
   const allScheduledEvents = useMemo(() => {
       const closedProposalsAsEvents: Event[] = proposals
           .filter(p => p.status === ProposalStatus.Closed)
           .map(p => {
-              const [year, month, day] = p.date.split('-').map(Number);
+              const dateParts = p.date.toString().split('T')[0].split('-');
+              const year = parseInt(dateParts[0]);
+              const month = parseInt(dateParts[1]);
+              const day = parseInt(dateParts[2]);
               return {
                   id: `prop-${p.id}`,
                   title: `(Contrato) ${p.eventName}`,
@@ -96,36 +97,17 @@ const App: React.FC = () => {
                   endTime: '23:59'
               } as Event;
           });
-      
       return [...events, ...closedProposalsAsEvents];
   }, [events, proposals]);
 
-  const addProposal = (newProposal: Proposal) => {
-    setProposals(prev => [newProposal, ...prev]);
-  };
-
-  const updateProposal = (updatedProposal: Proposal) => {
-    setProposals(prev => prev.map(p => p.id === updatedProposal.id ? updatedProposal : p));
-  };
-
-  const addClient = (newClientData: Omit<Client, 'id' | 'proposals' | 'events'>) => {
-    const newClient: Client = {
-      ...newClientData,
-      id: `c${clients.length + 1}`,
-      proposals: 0,
-      events: 0,
-    };
-    setClients(prev => [newClient, ...prev]);
-  };
-
-  const handleEventClick = (event: Event) => {
-      setSelectedEvent(event);
-  };
+  const addProposal = (newProposal: Proposal) => setProposals((prev: any) => [newProposal, ...prev]);
+  const updateProposal = (updatedProposal: Proposal) => {}; // Handled inside Hooks via specialized methods
+  const addClient = (newClientData: Omit<Client, 'id' | 'proposals' | 'events'>) => setClients((prev: any) => [{...newClientData}, ...prev]);
+  const handleEventClick = (event: Event) => setSelectedEvent(event);
 
   const handleTaskToggle = (taskId: string) => {
       if (selectedEvent) {
           toggleEventTask(selectedEvent.id, taskId);
-          // Optimistic UI update for the modal
           if (selectedEvent.checklist) {
             setSelectedEvent({
                 ...selectedEvent,
@@ -137,23 +119,16 @@ const App: React.FC = () => {
 
   const handleAddCost = (eventId: string, cost: any) => {
       addEventCost(eventId, cost);
-      // Optimistic update
       if (selectedEvent && selectedEvent.id === eventId) {
           const newCost = { ...cost, id: `temp-${Date.now()}` };
-          setSelectedEvent({
-              ...selectedEvent,
-              costs: [...(selectedEvent.costs || []), newCost]
-          });
+          setSelectedEvent({ ...selectedEvent, costs: [...(selectedEvent.costs || []), newCost] });
       }
   };
 
   const handleDeleteCost = (eventId: string, costId: string) => {
       deleteEventCost(eventId, costId);
       if (selectedEvent && selectedEvent.id === eventId) {
-          setSelectedEvent({
-              ...selectedEvent,
-              costs: selectedEvent.costs?.filter(c => c.id !== costId)
-          });
+          setSelectedEvent({ ...selectedEvent, costs: selectedEvent.costs?.filter(c => c.id !== costId) });
       }
   };
 
@@ -162,49 +137,20 @@ const App: React.FC = () => {
       setCurrentView('proposals');
   };
   
-  const handleLogout = () => {
-      authService.logout();
+  const handleLogout = async () => {
+      await authService.logout();
       setUser(null);
   };
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard':
-        return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
-      case 'proposals':
-        return <Proposals 
-                  initialProposals={proposals} 
-                  onAddProposal={addProposal} 
-                  onUpdateProposal={updateProposal}
-                  businessProfile={businessProfile}
-                  draftProposal={draftProposal}
-                  onClearDraft={() => setDraftProposal(undefined)}
-                  existingEvents={allScheduledEvents}
-                  privacyMode={privacyMode}
-                />;
-      case 'agenda':
-        return <Agenda events={allScheduledEvents} onEventClick={handleEventClick} />;
-      case 'clients':
-        return <Clients 
-                  clients={clients} 
-                  onAddClient={addClient} 
-                  suppliers={suppliers}
-                  onAddSupplier={addSupplier}
-                  onDeleteSupplier={deleteSupplier}
-                />;
-      case 'finance':
-        return <Finance 
-                  transactions={transactions} 
-                  onUpdateStatus={updateTransactionStatus} 
-                  historicalData={historicalRevenue}
-                  businessProfile={businessProfile}
-                  onUpdateGoal={updateMonthlyGoal}
-                  privacyMode={privacyMode}
-                />;
-      case 'settings':
-         return <Settings profile={businessProfile} onSave={setBusinessProfile} onLogout={handleLogout} />;
-      default:
-        return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
+      case 'dashboard': return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
+      case 'proposals': return <Proposals initialProposals={proposals} onAddProposal={addProposal} onUpdateProposal={updateProposal} businessProfile={businessProfile} draftProposal={draftProposal} onClearDraft={() => setDraftProposal(undefined)} existingEvents={allScheduledEvents} privacyMode={privacyMode} />;
+      case 'agenda': return <Agenda events={allScheduledEvents} onEventClick={handleEventClick} />;
+      case 'clients': return <Clients clients={clients} onAddClient={addClient} suppliers={suppliers} onAddSupplier={addSupplier} onDeleteSupplier={deleteSupplier} />;
+      case 'finance': return <Finance transactions={transactions} onUpdateStatus={updateTransactionStatus} historicalData={historicalRevenue} businessProfile={businessProfile} onUpdateGoal={updateMonthlyGoal} privacyMode={privacyMode} />;
+      case 'settings': return <Settings profile={businessProfile} onSave={setBusinessProfile} onLogout={handleLogout} />;
+      default: return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
     }
   };
 
@@ -218,123 +164,71 @@ const App: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) {
-      return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Carregando...</div>;
-  }
-
-  if (!user) {
-      return <Auth onLogin={setUser} />;
-  }
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Carregando...</div>;
+  if (!user) return <Auth onLogin={setUser} />;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
+      {!isSupabaseConfigured && (
+          <div className="bg-yellow-600 text-white text-xs font-bold text-center py-1 px-4 shadow-md flex justify-center items-center">
+             <ExclamationTriangleIcon className="w-4 h-4 mr-2"/>
+             MODO DEMO (OFFLINE) - Dados salvos apenas no seu navegador. Para produção, configure as VITE_SUPABASE_...
+          </div>
+      )}
+      
       <main className="pb-20">
         <div className="p-4 sm:p-6">
           <header className="mb-6 flex justify-between items-center relative">
             <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Mil Eventos</h1>
-                <p className="text-indigo-600 dark:text-indigo-400 text-sm">
-                    {getTitle()}
-                </p>
+                <p className="text-indigo-600 dark:text-indigo-400 text-sm">{getTitle()}</p>
             </div>
             <div className="flex items-center space-x-2">
-                {/* Theme Toggle */}
-                <button 
-                    onClick={toggleTheme}
-                    className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors"
-                    title={theme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-                >
+                <button onClick={toggleTheme} className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
                     {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
                 </button>
-
-                {/* Privacy Toggle */}
-                <button 
-                    onClick={() => setPrivacyMode(!privacyMode)}
-                    className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors"
-                >
+                <button onClick={() => setPrivacyMode(!privacyMode)} className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
                     {privacyMode ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                 </button>
-
-                {/* Notifications Bell */}
                 <div className="relative">
-                    <button 
-                        onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                        className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors"
-                    >
+                    <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
                         <BellIcon className="w-5 h-5" />
-                        {unreadCount > 0 && (
-                            <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800 transform translate-x-1/4 -translate-y-1/4"></span>
-                        )}
+                        {unreadCount > 0 && <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800 transform translate-x-1/4 -translate-y-1/4"></span>}
                     </button>
-
-                    {/* Dropdown */}
                     {isNotificationsOpen && (
                         <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-5 duration-200">
                             <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
                                 <span className="font-bold text-sm text-gray-900 dark:text-white">Notificações</span>
-                                <span className="text-xs text-gray-500">
-                                    {unreadCount > 0 ? `${unreadCount} novas` : 'Nenhuma nova'}
-                                </span>
+                                <span className="text-xs text-gray-500">{unreadCount > 0 ? `${unreadCount} novas` : 'Nenhuma nova'}</span>
                             </div>
                             <div className="max-h-64 overflow-y-auto">
                                 {notifications.map(n => (
-                                    <div 
-                                        key={n.id} 
-                                        onClick={() => markNotificationRead(n.id)}
-                                        className={`p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${n.read ? 'opacity-60' : 'bg-indigo-50 dark:bg-indigo-500/5'}`}
-                                    >
+                                    <div key={n.id} onClick={() => markNotificationRead(n.id)} className={`p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${n.read ? 'opacity-60' : 'bg-indigo-50 dark:bg-indigo-500/5'}`}>
                                         <div className="flex justify-between items-start mb-1">
-                                            <p className={`text-sm font-semibold ${n.type === 'success' ? 'text-green-600 dark:text-green-400' : n.type === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                                                {n.title}
-                                            </p>
+                                            <p className={`text-sm font-semibold ${n.type === 'success' ? 'text-green-600 dark:text-green-400' : n.type === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'}`}>{n.title}</p>
                                             <span className="text-[10px] text-gray-400">{n.time}</span>
                                         </div>
                                         <p className="text-xs text-gray-600 dark:text-gray-300">{n.message}</p>
                                     </div>
                                 ))}
-                                {notifications.length === 0 && (
-                                    <div className="p-4 text-center text-xs text-gray-500">Nenhuma notificação.</div>
-                                )}
+                                {notifications.length === 0 && <div className="p-4 text-center text-xs text-gray-500">Nenhuma notificação.</div>}
                             </div>
                         </div>
                     )}
                 </div>
-
-                <button 
-                    onClick={() => setCurrentView('settings')}
-                    className={`p-2 rounded-full transition-colors shadow-sm border border-transparent ${currentView === 'settings' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-gray-200 dark:border-gray-700'}`}
-                >
+                <button onClick={() => setCurrentView('settings')} className={`p-2 rounded-full transition-colors shadow-sm border border-transparent ${currentView === 'settings' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-gray-200 dark:border-gray-700'}`}>
                     <CogIcon className="w-5 h-5" />
                 </button>
-                {businessProfile.logoUrl && (
-                    <img src={businessProfile.logoUrl} alt="Logo" className="h-9 w-9 rounded-full object-cover border-2 border-indigo-500 shadow-sm" />
-                )}
+                {businessProfile.logoUrl && <img src={businessProfile.logoUrl} alt="Logo" className="h-9 w-9 rounded-full object-cover border-2 border-indigo-500 shadow-sm" />}
             </div>
           </header>
-          
-          {/* Click outside to close notifications overlay (simplified) */}
-          {isNotificationsOpen && (
-              <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>
-          )}
-
+          {isNotificationsOpen && <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>}
           {renderView()}
-
-          {selectedEvent && (
-              <EventDetail 
-                event={selectedEvent} 
-                onClose={() => setSelectedEvent(null)} 
-                onToggleTask={handleTaskToggle}
-                onAddCost={handleAddCost}
-                onDeleteCost={handleDeleteCost}
-                privacyMode={privacyMode}
-                suppliers={suppliers}
-              />
-          )}
+          {selectedEvent && <EventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} onToggleTask={handleTaskToggle} onAddCost={handleAddCost} onDeleteCost={handleDeleteCost} privacyMode={privacyMode} suppliers={suppliers} />}
         </div>
       </main>
       <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
     </div>
   );
 };
-
 export default App;

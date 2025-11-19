@@ -1,13 +1,20 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Assume API_KEY is set in the environment
-const API_KEY = process.env.API_KEY;
+// Em produção, use variáveis de ambiente seguras.
+// Para teste local/browser, você pode colar a chave aqui ou deixar vazio para usar o modo offline.
 
-if (!API_KEY) {
-  console.warn("API_KEY not found in environment variables. Gemini service will not work.");
-}
+const getEnvVar = (key: string, fallback: string) => {
+    try {
+        return (import.meta as any)?.env?.[key] || fallback;
+    } catch (e) {
+        return fallback;
+    }
+};
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+const API_KEY = getEnvVar('VITE_GEMINI_API_KEY', ''); 
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export const generateProposalDescription = async (
   eventName: string,
@@ -15,7 +22,8 @@ export const generateProposalDescription = async (
   serviceType: string
 ): Promise<string> => {
   if (!API_KEY) {
-    return Promise.resolve(`Descrição para o evento ${eventName} com ${clientName}, serviço de ${serviceType}. (Modo offline: API Key não configurada)`);
+    // Fallback gracioso se não houver chave API
+    return Promise.resolve(`Proposta personalizada para ${clientName} referente ao evento ${eventName} (${serviceType}). (Descrição gerada offline - Configure a API Key para usar IA)`);
   }
   
   const prompt = `Crie uma breve descrição profissional e amigável para uma proposta de evento. A proposta é para o cliente "${clientName}" para o evento "${eventName}". O serviço principal é "${serviceType}". Foque em transmitir profissionalismo e entusiasmo. Responda em português do Brasil.`;
@@ -29,7 +37,7 @@ export const generateProposalDescription = async (
     return response.text || "";
   } catch (error) {
     console.error("Error generating proposal description:", error);
-    return "Não foi possível gerar a descrição. Por favor, tente novamente.";
+    return "Não foi possível gerar a descrição pela IA no momento.";
   }
 };
 
@@ -39,12 +47,11 @@ export const extractProposalFromText = async (text: string): Promise<{
     date?: string;
     serviceType?: string;
 }> => {
-    // Heuristic Fallback (Local Parsing) if API is not available or fails
-    // This is a simple simulation of what the AI would do
+    // Função de extração local (Regex) caso a IA falhe ou não esteja configurada
     const extractLocally = (t: string) => {
         const nameMatch = t.match(/(?:sou|chamo|aqui é|fala com) (?:o|a)?\s?([A-Z][a-z]+)/i);
         const typeMatch = t.match(/(dj|fotografia|decoração|iluminação|som|banda|casamento|15 anos)/i);
-        const dateMatch = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); // Simple DD/MM date parser
+        const dateMatch = t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/); // Parser simples DD/MM
         
         let parsedDate = '';
         if (dateMatch) {

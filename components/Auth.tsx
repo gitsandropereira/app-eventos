@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { authService } from '../services/authService';
 import { User } from '../types';
-import { LockClosedIcon, UserCircleIcon, CheckCircleIcon } from './icons';
+import { LockClosedIcon, UserCircleIcon } from './icons';
+import { isSupabaseConfigured } from '../src/lib/supabase';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -16,14 +17,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => { // Simulate network delay
+    try {
         if (isLogin) {
-            const result = authService.login(email, password);
+            const result = await authService.login(email, password);
             if ('error' in result) {
                 setError(result.error);
                 setLoading(false);
@@ -36,16 +37,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 setLoading(false);
                 return;
             }
-            const result = authService.register(name, email, password);
+            const result = await authService.register(name, email, password);
             if ('error' in result) {
                 setError(result.error);
                 setLoading(false);
             } else {
-                // Auto login after register
                 onLogin(result);
             }
         }
-    }, 800);
+    } catch (err) {
+        console.error(err);
+        setError('Ocorreu um erro inesperado.');
+        setLoading(false);
+    }
   };
 
   return (
@@ -54,8 +58,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         
         {/* Header */}
         <div className="bg-indigo-900/30 p-8 text-center border-b border-gray-700 relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 mb-4 shadow-lg shadow-indigo-500/30">
+            {!isSupabaseConfigured && (
+                 <div className="absolute top-0 left-0 w-full bg-yellow-600 text-white text-[10px] py-1 font-bold uppercase tracking-widest">
+                     Modo Demo (Offline)
+                 </div>
+            )}
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 mb-4 shadow-lg shadow-indigo-500/30 mt-2">
                 <LockClosedIcon className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">Mil Eventos</h1>
@@ -77,7 +85,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                     <div>
-                        <label className="block text-xs text-gray-400 uppercase font-bold mb-1 ml-1">Nome da Empresa/Profissional</label>
+                        <label className="block text-xs text-gray-400 uppercase font-bold mb-1 ml-1">Nome da Empresa</label>
                         <div className="relative">
                              <span className="absolute left-3 top-3 text-gray-500"><UserCircleIcon className="w-5 h-5"/></span>
                              <input 
