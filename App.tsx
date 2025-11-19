@@ -140,8 +140,16 @@ const App: React.FC = () => {
       try {
         await authService.logout();
       } finally {
-        // Force local state cleanup even if API call fails or times out
         setUser(null);
+      }
+  };
+  
+  const handleLogin = (loggedInUser: User, isNewUser?: boolean) => {
+      setUser(loggedInUser);
+      if (isNewUser) {
+          setCurrentView('settings');
+      } else {
+          setCurrentView('dashboard');
       }
   };
 
@@ -168,7 +176,7 @@ const App: React.FC = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Carregando...</div>;
-  if (!user) return <Auth onLogin={setUser} />;
+  if (!user) return <Auth onLogin={handleLogin} />;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200">

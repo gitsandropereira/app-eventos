@@ -3,10 +3,9 @@ import React, { useState } from 'react';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { LockClosedIcon, UserCircleIcon } from './icons';
-import { isSupabaseConfigured } from '../src/lib/supabase';
 
 interface AuthProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, isNewUser?: boolean) => void;
 }
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
@@ -29,7 +28,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 setError(result.error);
                 setLoading(false);
             } else {
-                onLogin(result);
+                onLogin(result, false);
             }
         } else {
             if (!name) {
@@ -42,7 +41,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 setError(result.error);
                 setLoading(false);
             } else {
-                onLogin(result);
+                onLogin(result, true); // True for isNewUser
             }
         }
     } catch (err) {
@@ -58,11 +57,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         
         {/* Header */}
         <div className="bg-indigo-900/30 p-8 text-center border-b border-gray-700 relative">
-            {!isSupabaseConfigured && (
-                 <div className="absolute top-0 left-0 w-full bg-yellow-600 text-white text-[10px] py-1 font-bold uppercase tracking-widest">
-                     Modo Demo (Offline)
-                 </div>
-            )}
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 mb-4 shadow-lg shadow-indigo-500/30 mt-2">
                 <LockClosedIcon className="w-8 h-8 text-white" />
             </div>

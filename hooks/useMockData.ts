@@ -176,8 +176,36 @@ export const useMockData = (userId?: string) => {
 
   // --- ACTIONS (HYBRID) ---
 
+  // 2. CLIENTS (Hoist this up because proposals need it)
+  const addNewClient = async (client: any) => {
+      if (!isSupabaseConfigured) {
+          const newCl = { ...client, id: Date.now().toString(), proposals: 0, events: 0 };
+          const newClients = [newCl, ...clients];
+          setClients(newClients);
+          saveLocal('clients', newClients);
+          return;
+      }
+      await supabase.from('clients').insert({
+          user_id: userId,
+          name: client.name,
+          phone: client.phone,
+          email: client.email
+      });
+      fetchData();
+  };
+
   // 1. PROPOSALS
   const addProposal = async (prop: Proposal) => {
+      // Check if client exists, if not create them
+      const existingClient = clients.find(c => c.name.toLowerCase() === prop.clientName.toLowerCase());
+      if (!existingClient && prop.clientName) {
+          await addNewClient({
+              name: prop.clientName,
+              phone: '', // No phone data from proposal modal yet
+              email: ''
+          });
+      }
+
       if (!isSupabaseConfigured) {
           const newProps = [prop, ...proposals];
           setProposals(newProps);
@@ -209,24 +237,6 @@ export const useMockData = (userId?: string) => {
           amount: prop.amount
       }).eq('id', prop.id);
       // fetchData(); // Optional: We rely on optimistic update + subscription
-  };
-
-  // 2. CLIENTS
-  const addNewClient = async (client: any) => {
-      if (!isSupabaseConfigured) {
-          const newCl = { ...client, id: Date.now().toString(), proposals: 0, events: 0 };
-          const newClients = [newCl, ...clients];
-          setClients(newClients);
-          saveLocal('clients', newClients);
-          return;
-      }
-      await supabase.from('clients').insert({
-          user_id: userId,
-          name: client.name,
-          phone: client.phone,
-          email: client.email
-      });
-      fetchData();
   };
 
   // 3. PROFILE
