@@ -2,23 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import type { BusinessProfile, ServicePackage } from '../types';
 import { BriefcaseIcon, SparklesIcon, PackageIcon, PlusIcon, TrashIcon, GlobeAltIcon, UserCircleIcon, InstagramIcon, ShareIcon, ExternalLinkIcon, ChatBubbleLeftRightIcon, ArrowRightOnRectangleIcon, CloudArrowUpIcon } from './icons';
-import { useMockData } from '../hooks/useMockData';
 import PublicSiteView from './PublicSiteView';
 
 interface SettingsProps {
   profile: BusinessProfile;
   onSave: (profile: BusinessProfile) => void;
   onLogout: () => void;
+  services: ServicePackage[];
+  onAddService: (service: Omit<ServicePackage, 'id' | 'user_id'>) => void;
+  onDeleteService: (id: string) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
+const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services, onAddService, onDeleteService }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'services' | 'website' | 'scripts'>('profile');
   const [formData, setFormData] = useState<BusinessProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
   const [showSitePreview, setShowSitePreview] = useState(false);
   const [logoError, setLogoError] = useState('');
-  
-  const { services, addService, deleteService } = useMockData();
   
   const [newService, setNewService] = useState({ name: '', price: '', description: '' });
 
@@ -76,7 +76,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
   const handleAddService = (e: React.FormEvent) => {
       e.preventDefault();
       if (newService.name && newService.price) {
-          addService({
+          onAddService({
               name: newService.name,
               price: parseFloat(newService.price),
               description: newService.description
@@ -87,9 +87,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
 
   const handleLogoutClick = (e: React.MouseEvent) => {
       e.preventDefault();
-      if(window.confirm('Tem certeza que deseja sair?')) {
-          onLogout();
-      }
+      // Direct logout action without confirmation window which might be blocked
+      onLogout();
   };
 
   if (showSitePreview) {
@@ -359,7 +358,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                             </span>
                         </div>
                         <button 
-                            onClick={() => deleteService(service.id)}
+                            onClick={() => onDeleteService(service.id)}
                             className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                             <TrashIcon className="w-5 h-5" />

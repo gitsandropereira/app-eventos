@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProposalStatus } from '../types';
-import type { Proposal, BusinessProfile, Event } from '../types';
+import type { Proposal, BusinessProfile, Event, ServicePackage } from '../types';
 import { PlusIcon } from './icons';
 import ProposalModal from './ProposalModal';
 import ProposalDetail from './ProposalDetail';
@@ -73,9 +73,10 @@ interface ProposalsProps {
   onClearDraft?: () => void;
   existingEvents: Event[]; // Added prop for conflict detection
   privacyMode: boolean;
+  services: ServicePackage[];
 }
 
-const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, onUpdateProposal, businessProfile, draftProposal, onClearDraft, existingEvents, privacyMode }) => {
+const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, onUpdateProposal, businessProfile, draftProposal, onClearDraft, existingEvents, privacyMode, services }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   
@@ -143,6 +144,7 @@ const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, 
           onSave={handleAddProposal}
           initialData={draftProposal}
           existingEvents={existingEvents} 
+          services={services}
         />
       )}
 

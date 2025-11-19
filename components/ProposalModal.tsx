@@ -1,19 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import type { Proposal, Event } from '../types';
+import type { Proposal, Event, ServicePackage } from '../types';
 import { generateProposalDescription } from '../services/geminiService';
 import { SparklesIcon, PackageIcon, ExclamationTriangleIcon } from './icons';
-import { useMockData } from '../hooks/useMockData';
 
 interface ProposalModalProps {
   onClose: () => void;
   onSave: (proposal: Omit<Proposal, 'id' | 'status'>) => void;
   initialData?: Partial<Proposal> & { serviceType?: string };
   existingEvents?: Event[];
+  services: ServicePackage[];
 }
 
-const ProposalModal: React.FC<ProposalModalProps> = ({ onClose, onSave, initialData, existingEvents = [] }) => {
-  const { services } = useMockData();
+const ProposalModal: React.FC<ProposalModalProps> = ({ onClose, onSave, initialData, existingEvents = [], services }) => {
   const [clientName, setClientName] = useState('');
   const [eventName, setEventName] = useState('');
   const [serviceType, setServiceType] = useState('');
