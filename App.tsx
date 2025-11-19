@@ -75,7 +75,7 @@ const App: React.FC = () => {
   const { 
     proposals, kpis, events, clients, businessProfile, transactions, notifications, historicalRevenue, suppliers,
     setProposals, setClients, setBusinessProfile, updateTransactionStatus, markNotificationRead, toggleEventTask,
-    updateMonthlyGoal, addEventCost, deleteEventCost, addSupplier, deleteSupplier
+    updateMonthlyGoal, addEventCost, deleteEventCost, addSupplier, deleteSupplier, updateProposal
   } = useMockData(user?.id);
 
   const allScheduledEvents = useMemo(() => {
@@ -101,7 +101,6 @@ const App: React.FC = () => {
   }, [events, proposals]);
 
   const addProposal = (newProposal: Proposal) => setProposals((prev: any) => [newProposal, ...prev]);
-  const updateProposal = (updatedProposal: Proposal) => {}; // Handled inside Hooks via specialized methods
   const addClient = (newClientData: Omit<Client, 'id' | 'proposals' | 'events'>) => setClients((prev: any) => [{...newClientData}, ...prev]);
   const handleEventClick = (event: Event) => setSelectedEvent(event);
 

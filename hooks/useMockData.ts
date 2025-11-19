@@ -196,9 +196,11 @@ export const useMockData = (userId?: string) => {
   };
 
   const updateProposal = async (prop: Proposal) => {
+      // Optimistic Update: Update UI immediately
+      const newProps = proposals.map(p => p.id === prop.id ? prop : p);
+      setProposals(newProps);
+
       if (!isSupabaseConfigured) {
-          const newProps = proposals.map(p => p.id === prop.id ? prop : p);
-          setProposals(newProps);
           saveLocal('proposals', newProps);
           return;
       }
@@ -206,7 +208,7 @@ export const useMockData = (userId?: string) => {
           status: prop.status,
           amount: prop.amount
       }).eq('id', prop.id);
-      fetchData();
+      // fetchData(); // Optional: We rely on optimistic update + subscription
   };
 
   // 2. CLIENTS
@@ -329,6 +331,7 @@ export const useMockData = (userId?: string) => {
              if (res.length > 0) addProposal(res[0]);
         }
     }, 
+    updateProposal, // EXPORTED NOW
     setClients: (val: any) => {
          if (typeof val === 'function') {
              const res = val([]);
