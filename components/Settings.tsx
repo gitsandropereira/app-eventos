@@ -85,7 +85,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
       }
   };
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = (e: React.MouseEvent) => {
+      e.preventDefault();
       if(window.confirm('Tem certeza que deseja sair?')) {
           onLogout();
       }
@@ -104,7 +105,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-white">Configurações</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Configurações</h2>
         <div className="flex items-center space-x-2">
             {isSaved && activeTab !== 'services' && (
             <span className="text-green-400 text-xs font-bold animate-pulse bg-green-400/10 px-2 py-1 rounded-full">
@@ -112,8 +113,9 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
             </span>
             )}
             <button 
+                type="button"
                 onClick={handleLogoutClick}
-                className="bg-gray-800 text-red-400 p-2 rounded-full hover:bg-red-500/10 transition-colors"
+                className="bg-gray-200 dark:bg-gray-800 text-red-500 dark:text-red-400 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-500/10 transition-colors shadow-sm"
                 title="Sair da Conta"
             >
                 <ArrowRightOnRectangleIcon className="w-5 h-5" />
@@ -122,29 +124,29 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-gray-800 p-1 rounded-lg mb-6 overflow-x-auto">
+      <div className="flex space-x-1 bg-gray-200 dark:bg-gray-800 p-1 rounded-lg mb-6 overflow-x-auto">
           <button 
             onClick={() => setActiveTab('profile')}
-            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}
+            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
               Perfil
           </button>
           <button 
             onClick={() => setActiveTab('services')}
-            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'services' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}
+            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'services' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
               Pacotes
           </button>
           <button 
             onClick={() => setActiveTab('website')}
-            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${activeTab === 'website' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}
+            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${activeTab === 'website' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
               <GlobeAltIcon className="w-3 h-3 mr-1" />
               Site
           </button>
           <button 
             onClick={() => setActiveTab('scripts')}
-            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${activeTab === 'scripts' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}
+            className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${activeTab === 'scripts' ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
               <ChatBubbleLeftRightIcon className="w-3 h-3 mr-1" />
               Scripts
@@ -154,8 +156,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
       {activeTab === 'profile' && (
         <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-300">
             {/* Section: Identidade Visual */}
-            <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-            <div className="flex items-center mb-4 text-indigo-400">
+            <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center mb-4 text-indigo-600 dark:text-indigo-400">
                 <SparklesIcon className="w-5 h-5 mr-2" />
                 <h3 className="text-lg font-bold">Identidade & Branding</h3>
             </div>
@@ -165,39 +167,39 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                     {formData.logoUrl ? (
                         <img src={formData.logoUrl} alt="Logo" className="h-16 w-16 rounded-full object-cover border-2 border-indigo-500" />
                     ) : (
-                        <div className="h-16 w-16 rounded-full bg-gray-700 flex items-center justify-center text-gray-500">
+                        <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
                             Sem Logo
                         </div>
                     )}
                     <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-400 mb-1">Logotipo da Empresa</label>
-                        <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md text-sm flex items-center justify-center w-fit transition-colors">
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Logotipo da Empresa</label>
+                        <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white py-2 px-4 rounded-md text-sm flex items-center justify-center w-fit transition-colors border border-gray-300 dark:border-gray-600">
                             <CloudArrowUpIcon className="w-4 h-4 mr-2" />
                             Carregar Imagem
                             <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
                         </label>
-                        {logoError && <p className="text-red-400 text-xs mt-1">{logoError}</p>}
-                        <p className="text-gray-500 text-xs mt-1">Máx: 500KB (JPG/PNG)</p>
+                        {logoError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{logoError}</p>}
+                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Máx: 500KB (JPG/PNG)</p>
                     </div>
                 </div>
 
                 <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Nome da Empresa</label>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Nome da Empresa</label>
                 <input
                     type="text"
                     value={formData.name || ''}
                     onChange={e => handleChange('name', e.target.value)}
-                    className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Categoria</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria</label>
                     <select
                     value={formData.category || ''}
                     onChange={e => handleChange('category', e.target.value)}
-                    className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     >
                     <option>DJ</option>
                     <option>Fotografia</option>
@@ -207,7 +209,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Cor da Marca</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Cor da Marca</label>
                     <div className="flex items-center space-x-2">
                         <input
                             type="color"
@@ -215,7 +217,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                             onChange={e => handleChange('themeColor', e.target.value)}
                             className="h-12 w-12 rounded-md cursor-pointer border-0 bg-transparent"
                         />
-                        <span className="text-sm text-gray-400 uppercase">{formData.themeColor}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 uppercase">{formData.themeColor}</span>
                     </div>
                 </div>
                 </div>
@@ -223,8 +225,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
             </section>
 
             {/* Section: Contato e Financeiro */}
-            <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-            <div className="flex items-center mb-4 text-indigo-400">
+            <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center mb-4 text-indigo-600 dark:text-indigo-400">
                 <BriefcaseIcon className="w-5 h-5 mr-2" />
                 <h3 className="text-lg font-bold">Operacional</h3>
             </div>
@@ -232,32 +234,32 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
             <div className="grid gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">WhatsApp / Telefone</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">WhatsApp / Telefone</label>
                     <input
                         type="text"
                         value={formData.phone || ''}
                         onChange={e => handleChange('phone', e.target.value)}
-                        className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                     </div>
                     <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Email Comercial</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Comercial</label>
                     <input
                         type="email"
                         value={formData.email || ''}
                         onChange={e => handleChange('email', e.target.value)}
-                        className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                     </div>
                 </div>
 
-                <div className="border-t border-gray-700 pt-4 mt-2">
-                    <label className="block text-sm font-bold text-gray-300 mb-3">Dados Bancários (para Contratos)</label>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Dados Bancários (para Contratos)</label>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                         <select
                             value={formData.pixKeyType || 'CNPJ'}
                             onChange={e => handleChange('pixKeyType', e.target.value)}
-                            className="col-span-1 bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                            className="col-span-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
                         >
                             <option>CPF</option>
                             <option>CNPJ</option>
@@ -270,7 +272,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                             placeholder="Chave PIX"
                             value={formData.pixKey || ''}
                             onChange={e => handleChange('pixKey', e.target.value)}
-                            className="col-span-2 bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            className="col-span-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         />
                     </div>
                 </div>
@@ -278,14 +280,14 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
             </section>
 
             {/* Section: Jurídico */}
-            <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                <h3 className="text-lg font-bold text-white mb-4">Termos Padrão do Contrato</h3>
-                <p className="text-xs text-gray-400 mb-2">Estas cláusulas serão inseridas automaticamente em novos contratos.</p>
+            <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Termos Padrão do Contrato</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Estas cláusulas serão inseridas automaticamente em novos contratos.</p>
                 <textarea
                     rows={6}
                     value={formData.contractTerms || ''}
                     onChange={e => handleChange('contractTerms', e.target.value)}
-                    className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-mono"
+                    className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-mono"
                 />
             </section>
 
@@ -301,9 +303,9 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
       {activeTab === 'services' && (
         <div className="space-y-6 animate-in fade-in duration-300">
             {/* Add New Service */}
-            <section className="bg-gray-800 p-5 rounded-lg shadow-md border border-indigo-500/30">
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center">
-                    <PlusIcon className="w-5 h-5 mr-2 text-indigo-400"/>
+            <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-indigo-500/30">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <PlusIcon className="w-5 h-5 mr-2 text-indigo-500 dark:text-indigo-400"/>
                     Novo Pacote de Serviço
                 </h3>
                 <form onSubmit={handleAddService} className="space-y-3">
@@ -314,7 +316,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                                 placeholder="Nome do Pacote (ex: Casamento Básico)"
                                 value={newService.name}
                                 onChange={e => setNewService(prev => ({...prev, name: e.target.value}))}
-                                className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />
                         </div>
                         <div>
@@ -323,7 +325,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                                 placeholder="Valor (R$)"
                                 value={newService.price}
                                 onChange={e => setNewService(prev => ({...prev, price: e.target.value}))}
-                                className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />
                         </div>
                     </div>
@@ -331,13 +333,13 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                         placeholder="O que está incluso? (ex: 4h de festa, som, iluminação...)"
                         value={newService.description}
                         onChange={e => setNewService(prev => ({...prev, description: e.target.value}))}
-                        className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         rows={2}
                     />
                     <button 
                         type="submit" 
                         disabled={!newService.name || !newService.price}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-md transition-colors"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-md transition-colors"
                     >
                         Adicionar Pacote
                     </button>
@@ -346,19 +348,19 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
 
             {/* List Services */}
             <section className="space-y-3">
-                <h3 className="text-lg font-bold text-gray-400 uppercase text-xs tracking-wider mb-2 ml-1">Meus Pacotes Ativos</h3>
+                <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wider mb-2 ml-1">Meus Pacotes Ativos</h3>
                 {services.map(service => (
-                    <div key={service.id} className="bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-700 flex justify-between items-start">
+                    <div key={service.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-start">
                         <div>
-                            <h4 className="font-bold text-white text-lg">{service.name}</h4>
-                            <p className="text-sm text-gray-400 mb-2">{service.description}</p>
-                            <span className="inline-block bg-gray-900 text-indigo-400 px-2 py-1 rounded text-sm font-mono font-bold">
+                            <h4 className="font-bold text-gray-900 dark:text-white text-lg">{service.name}</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{service.description}</p>
+                            <span className="inline-block bg-gray-100 dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded text-sm font-mono font-bold">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(service.price)}
                             </span>
                         </div>
                         <button 
                             onClick={() => deleteService(service.id)}
-                            className="text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-700 transition-colors"
+                            className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                             <TrashIcon className="w-5 h-5" />
                         </button>
@@ -400,8 +402,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                   </div>
               </section>
 
-              <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                  <h3 className="text-lg font-bold text-white mb-4 flex items-center">
+              <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
                       <UserCircleIcon className="w-5 h-5 mr-2 text-gray-400" />
                       Sobre Você (Bio)
                   </h3>
@@ -410,33 +412,33 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                       placeholder="Escreva uma breve apresentação para seus clientes..."
                       value={formData.bio || ''}
                       onChange={e => handleChange('bio', e.target.value)}
-                      className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
               </section>
 
-              <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                  <h3 className="text-lg font-bold text-white mb-4 flex items-center">
+              <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
                       <ShareIcon className="w-5 h-5 mr-2 text-gray-400" />
                       Redes Sociais
                   </h3>
                   <div className="space-y-4">
                       <div>
-                          <label className="block text-sm text-gray-400 mb-1 flex items-center">
+                          <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1 flex items-center">
                               <InstagramIcon className="w-4 h-4 mr-1" /> Instagram (usuário)
                           </label>
                           <div className="flex items-center">
-                              <span className="bg-gray-600 text-gray-300 p-3 rounded-l-md border-r border-gray-500">@</span>
+                              <span className="bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 p-3 rounded-l-md border-r border-gray-300 dark:border-gray-500">@</span>
                               <input
                                   type="text"
                                   placeholder="usuario"
                                   value={formData.instagram || ''}
                                   onChange={e => handleChange('instagram', e.target.value)}
-                                  className="w-full bg-gray-700 text-white p-3 rounded-r-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                  className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-r-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                               />
                           </div>
                       </div>
                       <div>
-                           <label className="block text-sm text-gray-400 mb-1 flex items-center">
+                           <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1 flex items-center">
                               <GlobeAltIcon className="w-4 h-4 mr-1" /> Website (opcional)
                           </label>
                           <input
@@ -444,7 +446,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
                                 placeholder="www.seusite.com.br"
                                 value={formData.website || ''}
                                 onChange={e => handleChange('website', e.target.value)}
-                                className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />
                       </div>
                   </div>
@@ -461,42 +463,42 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout }) => {
 
       {activeTab === 'scripts' && (
           <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-300">
-              <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-blue-200">
+              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
                       <strong>Dica:</strong> Use variáveis como <code>{'{cliente}'}</code>, <code>{'{evento}'}</code>, <code>{'{link}'}</code> para personalizar automaticamente suas mensagens.
                   </p>
               </div>
 
-              <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                  <h3 className="text-lg font-bold text-white mb-2">Envio de Proposta</h3>
-                  <p className="text-xs text-gray-400 mb-3">Mensagem ao compartilhar o link da proposta.</p>
+              <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Envio de Proposta</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Mensagem ao compartilhar o link da proposta.</p>
                   <textarea
                       rows={5}
                       value={formData.messageTemplates?.proposalSend || ''}
                       onChange={e => handleTemplateChange('proposalSend', e.target.value)}
-                      className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
+                      className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
                   />
               </section>
 
-              <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                  <h3 className="text-lg font-bold text-white mb-2">Solicitação de Avaliação</h3>
-                  <p className="text-xs text-gray-400 mb-3">Mensagem pós-evento pedindo feedback.</p>
+              <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Solicitação de Avaliação</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Mensagem pós-evento pedindo feedback.</p>
                   <textarea
                       rows={5}
                       value={formData.messageTemplates?.reviewRequest || ''}
                       onChange={e => handleTemplateChange('reviewRequest', e.target.value)}
-                      className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
+                      className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
                   />
               </section>
 
-              <section className="bg-gray-800 p-5 rounded-lg shadow-md">
-                  <h3 className="text-lg font-bold text-white mb-2">Compartilhar Cronograma</h3>
-                  <p className="text-xs text-gray-400 mb-3">Mensagem ao enviar o Run of Show para a equipe.</p>
+              <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Compartilhar Cronograma</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Mensagem ao enviar o Run of Show para a equipe.</p>
                   <textarea
                       rows={5}
                       value={formData.messageTemplates?.timelineShare || ''}
                       onChange={e => handleTemplateChange('timelineShare', e.target.value)}
-                      className="w-full bg-gray-700 text-white p-3 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
+                      className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-sans leading-relaxed"
                   />
               </section>
 

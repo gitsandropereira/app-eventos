@@ -12,7 +12,7 @@ import Auth from './components/Auth';
 import { useMockData } from './hooks/useMockData';
 import { authService } from './services/authService';
 import { supabase, isSupabaseConfigured } from './src/lib/supabase';
-import { CogIcon, BellIcon, EyeIcon, EyeSlashIcon, SunIcon, MoonIcon, ExclamationTriangleIcon } from './components/icons';
+import { CogIcon, BellIcon, EyeIcon, EyeSlashIcon, SunIcon, MoonIcon } from './components/icons';
 import { Proposal, Client, Event, ProposalStatus, User } from './types';
 
 type View = 'dashboard' | 'proposals' | 'agenda' | 'clients' | 'finance' | 'settings';
@@ -137,8 +137,12 @@ const App: React.FC = () => {
   };
   
   const handleLogout = async () => {
-      await authService.logout();
-      setUser(null);
+      try {
+        await authService.logout();
+      } finally {
+        // Force local state cleanup even if API call fails or times out
+        setUser(null);
+      }
   };
 
   const renderView = () => {
@@ -168,13 +172,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
-      {!isSupabaseConfigured && (
-          <div className="bg-yellow-600 text-white text-xs font-bold text-center py-1 px-4 shadow-md flex justify-center items-center">
-             <ExclamationTriangleIcon className="w-4 h-4 mr-2"/>
-             MODO DEMO (OFFLINE) - Dados salvos apenas no seu navegador. Para produção, configure as VITE_SUPABASE_...
-          </div>
-      )}
-      
       <main className="pb-20">
         <div className="p-4 sm:p-6">
           <header className="mb-6 flex justify-between items-center relative">
