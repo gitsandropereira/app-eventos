@@ -15,8 +15,8 @@ const getEnvVar = (key: string, fallback: string) => {
     }
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', 'https://SEU_PROJETO.supabase.co');
-const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY', 'SUA_CHAVE_ANON_PUBLICA');
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', 'https://iujlzphwhtcsyvpulywa.supabase.co');
+const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx6cGh3aHRjc3l2cHVseXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1NTc5ODUsImV4cCI6MjA3OTEzMzk4NX0.CtpuDKmhFdtQqmxMkd0cvEuhcDlwETtZw54S6YVnbac');
 
 // Flag para verificar se o Supabase está configurado corretamente
 export const isSupabaseConfigured = !supabaseUrl.includes('SEU_PROJETO') && !supabaseKey.includes('SUA_CHAVE');
