@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Transaction, MonthlyMetric, BusinessProfile } from '../types';
-import { CheckCircleIcon, XCircleIcon, ChartBarIcon, PrinterIcon } from './icons';
+import { CheckCircleIcon, XCircleIcon, ChartBarIcon, PrinterIcon, PlusIcon, ArrowTrendingDownIcon, ArrowTrendingUpIcon, TrashIcon, BanknotesIcon } from './icons';
 import Analytics from './Analytics';
 import ReceiptModal from './ReceiptModal';
 import { formatDate } from '../utils/date';
@@ -9,64 +9,94 @@ import { formatDate } from '../utils/date';
 interface FinanceProps {
     transactions: Transaction[];
     onUpdateStatus: (id: string, status: 'paid' | 'pending' | 'overdue') => void;
-    // Props for analytics
+    onAddTransaction: (t: Omit<Transaction, 'id'>) => void;
+    onDeleteTransaction: (id: string) => void;
     historicalData?: MonthlyMetric[];
     businessProfile?: BusinessProfile;
     onUpdateGoal?: (amount: number) => void;
     privacyMode: boolean;
 }
 
-const Finance: React.FC<FinanceProps> = ({ transactions, onUpdateStatus, historicalData, businessProfile, onUpdateGoal, privacyMode }) => {
+const Finance: React.FC<FinanceProps> = ({ transactions, onUpdateStatus, onAddTransaction, onDeleteTransaction, historicalData, businessProfile, onUpdateGoal, privacyMode }) => {
     const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('all');
+    const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [selectedReceipt, setSelectedReceipt] = useState<Transaction | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // New Transaction Form State
+    const [newDesc, setNewDesc] = useState('');
+    const [newAmount, setNewAmount] = useState('');
+    const [newType, setNewType] = useState<'income' | 'expense'>('expense');
+    const [newCategory, setNewCategory] = useState('');
+    const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
 
     const formatCurrency = (value: number) => {
         if (privacyMode) return 'R$ ****';
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
 
-    const totalPending = transactions.filter(t => t.status === 'pending' || t.status === 'overdue').reduce((acc, curr) => acc + curr.amount, 0);
-    const totalPaid = transactions.filter(t => t.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0);
+    // Filter by Month
+    const monthlyTransactions = useMemo(() => {
+        return transactions.filter(t => t.date.startsWith(currentMonth));
+    }, [transactions, currentMonth]);
 
-    const filteredTransactions = transactions.filter(t => {
+    // Calculations
+    const totalIncome = monthlyTransactions
+        .filter(t => t.type === 'income' && t.status === 'paid')
+        .reduce((acc, curr) => acc + curr.amount, 0);
+    
+    const totalExpense = monthlyTransactions
+        .filter(t => t.type === 'expense' && t.status === 'paid')
+        .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const pendingIncome = monthlyTransactions
+        .filter(t => t.type === 'income' && t.status !== 'paid')
+        .reduce((acc, curr) => acc + curr.amount, 0);
+    
+    const pendingExpense = monthlyTransactions
+        .filter(t => t.type === 'expense' && t.status !== 'paid')
+        .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const balance = totalIncome - totalExpense;
+
+    const filteredTransactions = monthlyTransactions.filter(t => {
         if (filter === 'all') return true;
         if (filter === 'pending') return t.status === 'pending' || t.status === 'overdue';
         if (filter === 'paid') return t.status === 'paid';
         return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'paid': return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-400/10 border-green-200 dark:border-green-400/20';
-            case 'pending': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-400/10 border-yellow-200 dark:border-yellow-400/20';
-            case 'overdue': return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-400/10 border-red-200 dark:border-red-400/20';
-            default: return 'text-gray-500 dark:text-gray-400';
-        }
-    };
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'paid': return 'Recebido';
-            case 'pending': return 'A Receber';
-            case 'overdue': return 'Atrasado';
-            default: return status;
+    const handleAddTransaction = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newDesc && newAmount) {
+            onAddTransaction({
+                description: newDesc,
+                clientName: newCategory, // Using clientName field for category storage in quick add
+                amount: parseFloat(newAmount),
+                date: newDate,
+                status: newType === 'expense' ? 'paid' : 'pending', // Default status
+                type: newType,
+                category: newCategory
+            });
+            setIsModalOpen(false);
+            setNewDesc('');
+            setNewAmount('');
+            setNewCategory('');
         }
     };
 
     const handleExportCSV = () => {
-        const headers = ['Data', 'Descricao', 'Cliente', 'Valor', 'Status'];
+        const headers = ['Data', 'Tipo', 'Descricao', 'Categoria', 'Valor', 'Status'];
         const rows = transactions.map(t => [
             t.date,
+            t.type === 'income' ? 'Receita' : 'Despesa',
             t.description,
-            t.clientName,
+            t.category || t.clientName,
             t.amount.toString(),
-            getStatusLabel(t.status)
+            t.status
         ]);
-
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -89,128 +119,165 @@ const Finance: React.FC<FinanceProps> = ({ transactions, onUpdateStatus, histori
     }
 
     return (
-        <div className="pb-20">
-             <div className="flex justify-between items-center mb-6">
+        <div className="pb-24 relative">
+             {/* Header */}
+             <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 py-2">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Fluxo de Caixa</h2>
                 <div className="flex gap-2">
-                    <button 
-                        onClick={handleExportCSV}
-                        className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-full transition-colors shadow-sm"
-                        title="Exportar CSV"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        CSV
-                    </button>
-                    <button 
-                        onClick={() => setShowAnalytics(true)}
-                        className="flex items-center text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-full shadow-md transition-colors"
-                    >
-                        <ChartBarIcon className="w-4 h-4 mr-1" />
-                        Relatórios
+                    <button onClick={handleExportCSV} className="text-xs text-gray-500 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-full bg-white dark:bg-gray-800 shadow-sm">CSV</button>
+                    <button onClick={() => setShowAnalytics(true)} className="flex items-center text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-full shadow-md">
+                        <ChartBarIcon className="w-4 h-4 mr-1" /> Relatórios
                     </button>
                 </div>
             </div>
 
-            {/* Overview Cards */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-green-500 border-t border-r border-b border-gray-100 dark:border-gray-700 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-green-100 dark:bg-green-500/10 rounded-full blur-xl"></div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">Recebido</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalPaid)}</p>
+            {/* Month Selector */}
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-500 dark:text-gray-400 ml-2 uppercase">Período</span>
+                <input 
+                    type="month" 
+                    value={currentMonth}
+                    onChange={(e) => setCurrentMonth(e.target.value)}
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-1.5 rounded-lg font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-3 gap-2 mb-6">
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border-t-4 border-green-500 border border-gray-100 dark:border-gray-700">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Entradas</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(totalIncome)}</p>
+                    <p className="text-[10px] text-gray-400">+{formatCurrency(pendingIncome)} pend.</p>
                 </div>
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 border-t border-r border-b border-gray-100 dark:border-gray-700 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-yellow-100 dark:bg-yellow-500/10 rounded-full blur-xl"></div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">A Receber</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalPending)}</p>
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border-t-4 border-red-500 border border-gray-100 dark:border-gray-700">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Saídas</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(totalExpense)}</p>
+                    <p className="text-[10px] text-gray-400">+{formatCurrency(pendingExpense)} fut.</p>
+                </div>
+                <div className={`p-3 rounded-xl shadow-sm border-t-4 ${balance >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-600' : 'bg-red-50 dark:bg-red-900/20 border-red-600'}`}>
+                    <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Saldo</p>
+                    <p className={`text-lg font-bold ${balance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                        {formatCurrency(balance)}
+                    </p>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
-                <button 
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap shadow-sm ${filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
-                >
-                    Todas
-                </button>
-                <button 
-                    onClick={() => setFilter('pending')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap shadow-sm ${filter === 'pending' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
-                >
-                    Pendentes
-                </button>
-                <button 
-                    onClick={() => setFilter('paid')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap shadow-sm ${filter === 'paid' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
-                >
-                    Recebidas
-                </button>
+                {['all', 'paid', 'pending'].map(f => (
+                    <button 
+                        key={f}
+                        onClick={() => setFilter(f as any)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-colors whitespace-nowrap border ${filter === f ? 'bg-gray-800 text-white border-gray-800' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700'}`}
+                    >
+                        {f === 'all' ? 'Todas' : f === 'paid' ? 'Baixadas' : 'Pendentes'}
+                    </button>
+                ))}
             </div>
 
-            {/* Transaction List */}
+            {/* List */}
             <div className="space-y-3">
-                {filteredTransactions.map(transaction => (
-                    <div key={transaction.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-center group hover:border-indigo-200 dark:hover:border-gray-600 transition-all">
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                                <p className="font-bold text-gray-900 dark:text-white">{transaction.description}</p>
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${getStatusColor(transaction.status)}`}>
-                                    {getStatusLabel(transaction.status)}
-                                </span>
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{transaction.clientName}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(transaction.date)}</p>
-                        </div>
+                {filteredTransactions.map(t => (
+                    <div key={t.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-center group relative overflow-hidden">
+                        {/* Status Stripe */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${t.status === 'paid' ? (t.type === 'income' ? 'bg-green-500' : 'bg-red-500') : 'bg-yellow-400'}`}></div>
                         
-                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(transaction.amount)}</p>
+                        <div className="flex items-center ml-2">
+                            <div className={`p-2 rounded-full mr-3 ${t.type === 'income' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                {t.type === 'income' ? <ArrowTrendingUpIcon className="w-4 h-4" /> : <ArrowTrendingDownIcon className="w-4 h-4" />}
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-900 dark:text-white text-sm">{t.description}</p>
+                                <p className="text-xs text-gray-500">{formatDate(t.date)} • {t.category || t.clientName}</p>
+                            </div>
+                        </div>
+
+                        <div className="text-right">
+                            <p className={`font-bold ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                            </p>
                             
-                            <div className="flex space-x-2">
-                                {transaction.status === 'paid' && (
-                                     <button 
-                                        onClick={() => setSelectedReceipt(transaction)}
-                                        className="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1.5 rounded flex items-center transition-colors"
-                                        title="Gerar Recibo"
-                                    >
-                                        <PrinterIcon className="w-3 h-3 mr-1" />
-                                        Recibo
+                            <div className="flex items-center justify-end gap-2 mt-2">
+                                {t.status !== 'paid' && (
+                                    <button onClick={() => onUpdateStatus(t.id, 'paid')} className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform">
+                                        Receber
                                     </button>
                                 )}
-
-                                {transaction.status === 'pending' || transaction.status === 'overdue' ? (
-                                    <button 
-                                        onClick={() => onUpdateStatus(transaction.id, 'paid')}
-                                        className="text-xs bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded flex items-center transition-colors shadow-sm"
-                                    >
-                                        <CheckCircleIcon className="w-3 h-3 mr-1" />
-                                        Baixar
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={() => onUpdateStatus(transaction.id, 'pending')}
-                                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center opacity-50 hover:opacity-100 transition-opacity px-2"
-                                    >
-                                        Desfazer
-                                    </button>
+                                {t.status === 'paid' && t.type === 'income' && (
+                                     <button 
+                                        onClick={() => setSelectedReceipt(t)} 
+                                        className="flex items-center text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform"
+                                     >
+                                        <PrinterIcon className="w-3 h-3 mr-1.5"/>
+                                        Ver Recibo
+                                     </button>
                                 )}
                             </div>
                         </div>
                     </div>
                 ))}
-
                 {filteredTransactions.length === 0 && (
-                    <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
-                        Nenhuma transação encontrada.
+                    <div className="text-center py-10 opacity-50">
+                        <BanknotesIcon className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                        <p className="text-sm text-gray-500">Nenhuma movimentação neste mês.</p>
                     </div>
                 )}
             </div>
 
+            {/* Floating Add Button */}
+            <button 
+                onClick={() => setIsModalOpen(true)}
+                className="fixed bottom-24 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg shadow-indigo-600/30 transition-transform hover:scale-105 active:scale-95 z-30"
+            >
+                <PlusIcon className="w-6 h-6" />
+            </button>
+
+            {/* New Transaction Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 animate-in slide-in-from-bottom-10">
+                    <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nova Movimentação</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><XCircleIcon className="w-6 h-6"/></button>
+                        </div>
+                        
+                        <form onSubmit={handleAddTransaction} className="space-y-4">
+                            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                                <button type="button" onClick={() => setNewType('income')} className={`flex-1 py-2 rounded-md text-sm font-bold transition-colors ${newType === 'income' ? 'bg-white dark:bg-gray-600 text-green-600 shadow' : 'text-gray-500'}`}>Receita</button>
+                                <button type="button" onClick={() => setNewType('expense')} className={`flex-1 py-2 rounded-md text-sm font-bold transition-colors ${newType === 'expense' ? 'bg-white dark:bg-gray-600 text-red-600 shadow' : 'text-gray-500'}`}>Despesa</button>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Valor</label>
+                                <input type="number" required placeholder="0,00" value={newAmount} onChange={e => setNewAmount(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-xl font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 dark:border-gray-700" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição</label>
+                                <input type="text" required placeholder="Ex: Uber, Aluguel, Cliente X" value={newDesc} onChange={e => setNewDesc(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 dark:border-gray-700" />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Categoria</label>
+                                    <input type="text" placeholder="Ex: Transporte" value={newCategory} onChange={e => setNewCategory(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 dark:border-gray-700 text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Data</label>
+                                    <input type="date" required value={newDate} onChange={e => setNewDate(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-200 dark:border-gray-700 text-sm" />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4">
+                                Confirmar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {selectedReceipt && businessProfile && (
-                <ReceiptModal 
-                    transaction={selectedReceipt} 
-                    businessProfile={businessProfile}
-                    onClose={() => setSelectedReceipt(null)} 
-                />
+                <ReceiptModal transaction={selectedReceipt} businessProfile={businessProfile} onClose={() => setSelectedReceipt(null)} />
             )}
         </div>
     );

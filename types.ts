@@ -110,10 +110,12 @@ export interface BusinessProfile {
 export interface Transaction {
   id: string;
   description: string;
-  clientName: string;
+  clientName: string; // Pode ser vazio se for despesa avulsa
   amount: number;
   date: string;
   status: 'paid' | 'pending' | 'overdue';
+  type: 'income' | 'expense'; // Novo campo
+  category?: string; // Novo campo
   proposalId?: string;
 }
 
@@ -122,7 +124,6 @@ export interface ServicePackage {
   name: string;
   price: number;
   description: string;
-  
 }
 
 export interface Notification {

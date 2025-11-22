@@ -49,7 +49,6 @@ const App: React.FC = () => {
                       email: session.user.email || ''
                   });
               } else {
-                  // Do not auto logout if in demo mode as session is manual
                   if (isSupabaseConfigured) setUser(null);
               }
           });
@@ -57,7 +56,6 @@ const App: React.FC = () => {
       }
   }, []);
 
-  // Apply theme
   useEffect(() => {
       const root = window.document.documentElement;
       if (theme === 'dark') {
@@ -75,7 +73,8 @@ const App: React.FC = () => {
   const { 
     proposals, kpis, events, clients, businessProfile, transactions, notifications, historicalRevenue, suppliers, services,
     setProposals, setClients, setBusinessProfile, updateTransactionStatus, markNotificationRead, toggleEventTask,
-    updateMonthlyGoal, addEventCost, deleteEventCost, addSupplier, deleteSupplier, updateProposal, addService, deleteService
+    updateMonthlyGoal, addEventCost, deleteEventCost, addSupplier, deleteSupplier, updateProposal, addService, deleteService,
+    addTransaction, deleteTransaction // NEW
   } = useMockData(user?.id);
 
   const allScheduledEvents = useMemo(() => {
@@ -138,13 +137,15 @@ const App: React.FC = () => {
   
   const handleLogout = async () => {
       try {
+        setLoading(true);
         await authService.logout();
         setUser(null);
-        // Force reload to ensure clean state
-        window.location.href = '/'; 
       } catch (error) {
         console.error("Logout failed", error);
-        setUser(null);
+        // Failsafe
+        window.location.reload();
+      } finally {
+        setLoading(false);
       }
   };
   
@@ -159,12 +160,11 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      // FIX: Pass allScheduledEvents to Dashboard so it shows Closed Proposals
       case 'dashboard': return <Dashboard kpis={kpis} events={allScheduledEvents} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
       case 'proposals': return <Proposals initialProposals={proposals} onAddProposal={addProposal} onUpdateProposal={updateProposal} businessProfile={businessProfile} draftProposal={draftProposal} onClearDraft={() => setDraftProposal(undefined)} existingEvents={allScheduledEvents} privacyMode={privacyMode} services={services} />;
       case 'agenda': return <Agenda events={allScheduledEvents} onEventClick={handleEventClick} />;
       case 'clients': return <Clients clients={clients} onAddClient={addClient} suppliers={suppliers} onAddSupplier={addSupplier} onDeleteSupplier={deleteSupplier} />;
-      case 'finance': return <Finance transactions={transactions} onUpdateStatus={updateTransactionStatus} historicalData={historicalRevenue} businessProfile={businessProfile} onUpdateGoal={updateMonthlyGoal} privacyMode={privacyMode} />;
+      case 'finance': return <Finance transactions={transactions} onUpdateStatus={updateTransactionStatus} historicalData={historicalRevenue} businessProfile={businessProfile} onUpdateGoal={updateMonthlyGoal} privacyMode={privacyMode} onAddTransaction={addTransaction} onDeleteTransaction={deleteTransaction} />;
       case 'settings': return <Settings profile={businessProfile} onSave={setBusinessProfile} onLogout={handleLogout} services={services} onAddService={addService} onDeleteService={deleteService} />;
       default: return <Dashboard kpis={kpis} events={allScheduledEvents} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
     }
