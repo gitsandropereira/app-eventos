@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ProposalStatus } from '../types';
 import type { Proposal, BusinessProfile, Event, ServicePackage } from '../types';
-import { PlusIcon } from './icons';
+import { PlusIcon, CalendarIcon } from './icons';
 import ProposalModal from './ProposalModal';
 import ProposalDetail from './ProposalDetail';
 import { formatDateShort } from '../utils/date';
@@ -67,7 +67,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ status, proposals, onPropos
 interface ProposalsProps {
   initialProposals: Proposal[];
   onAddProposal: (proposal: Proposal) => void;
-  onUpdateProposal?: (proposal: Proposal) => void;
+  onUpdateProposal: (proposal: Proposal) => void; // Make this mandatory
   businessProfile: BusinessProfile;
   draftProposal?: Partial<Proposal>;
   onClearDraft?: () => void;
@@ -79,6 +79,7 @@ interface ProposalsProps {
 const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, onUpdateProposal, businessProfile, draftProposal, onClearDraft, existingEvents, privacyMode, services }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   
   useEffect(() => {
       if (draftProposal) {
@@ -86,9 +87,14 @@ const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, 
       }
   }, [draftProposal]);
 
-  const statuses = Object.values(ProposalStatus);
+  // Filter statuses to remove Analysis for cleaner view
+  const visibleStatuses = [ProposalStatus.Sent, ProposalStatus.Closing, ProposalStatus.Closed, ProposalStatus.Lost];
   
-  const proposalsByStatus = (status: ProposalStatus) => initialProposals.filter(p => p.status === status);
+  const filteredProposals = useMemo(() => {
+      return initialProposals.filter(p => p.date.startsWith(monthFilter));
+  }, [initialProposals, monthFilter]);
+
+  const proposalsByStatus = (status: ProposalStatus) => filteredProposals.filter(p => p.status === status);
 
   const handleAddProposal = (proposal: Omit<Proposal, 'id' | 'status'>) => {
     const newProposal: Proposal = {
@@ -117,16 +123,31 @@ const Proposals: React.FC<ProposalsProps> = ({ initialProposals, onAddProposal, 
     <div className="h-[calc(100vh-140px)] flex flex-col">
       <div className="flex justify-between items-center mb-4 px-1">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Funil de Vendas</h2>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded-full flex items-center transition-colors shadow-lg active:scale-95">
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Nova
-        </button>
+        
+        <div className="flex gap-2">
+            <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                </div>
+                <input 
+                    type="month" 
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                    className="pl-8 pr-2 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+                />
+            </div>
+
+            <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded-full flex items-center transition-colors shadow-lg active:scale-95">
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Nova
+            </button>
+        </div>
       </div>
       
       <div className="flex space-x-4 overflow-x-auto pb-4 flex-1 snap-x snap-mandatory">
-        {statuses.map(status => (
+        {visibleStatuses.map(status => (
           <div key={status} className="snap-center h-full">
              <KanbanColumn 
                 status={status} 

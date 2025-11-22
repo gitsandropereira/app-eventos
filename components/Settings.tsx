@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { BusinessProfile, ServicePackage } from '../types';
-import { BriefcaseIcon, SparklesIcon, PackageIcon, PlusIcon, TrashIcon, GlobeAltIcon, UserCircleIcon, InstagramIcon, ShareIcon, ExternalLinkIcon, ChatBubbleLeftRightIcon, ArrowRightOnRectangleIcon, CloudArrowUpIcon } from './icons';
+import { BriefcaseIcon, SparklesIcon, PackageIcon, PlusIcon, TrashIcon, GlobeAltIcon, UserCircleIcon, InstagramIcon, ShareIcon, ExternalLinkIcon, ChatBubbleLeftRightIcon, ArrowRightOnRectangleIcon, CloudArrowUpIcon, CheckCircleIcon } from './icons';
 import PublicSiteView from './PublicSiteView';
 import { isSupabaseConfigured } from '../src/lib/supabase';
 
@@ -112,11 +112,6 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
                 {isSupabaseConfigured ? 'Nuvem' : 'Local'}
             </div>
 
-            {isSaved && activeTab !== 'services' && (
-            <span className="text-green-400 text-xs font-bold animate-pulse bg-green-400/10 px-2 py-1 rounded-full">
-                Salvo!
-            </span>
-            )}
             <button 
                 type="button"
                 onClick={handleLogoutClick}
@@ -220,10 +215,11 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
                             type="color"
                             value={formData.themeColor || '#4F46E5'}
                             onChange={e => handleChange('themeColor', e.target.value)}
-                            className="h-12 w-12 rounded-md cursor-pointer border-0 bg-transparent"
+                            className="h-10 w-10 rounded-md cursor-pointer border-0 bg-transparent p-0"
                         />
                         <span className="text-sm text-gray-500 dark:text-gray-400 uppercase">{formData.themeColor}</span>
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1">Esta cor será usada nos botões e destaque do seu Link na Bio e Contratos PDF.</p>
                 </div>
                 </div>
             </div>
@@ -298,16 +294,22 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
 
             <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex justify-center items-center"
+                className={`w-full font-bold py-4 px-4 rounded-lg shadow-lg transition-all transform active:scale-95 flex justify-center items-center ${isSaved ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
             >
-                Salvar Alterações
+                {isSaved ? (
+                    <>
+                        <CheckCircleIcon className="w-6 h-6 mr-2" />
+                        Alterações Salvas com Sucesso!
+                    </>
+                ) : (
+                    "Salvar Alterações"
+                )}
             </button>
         </form>
       )}
-
+      {/* ... Other tabs remain similar but truncated for brevity in this specific update block, assuming they are preserved ... */}
       {activeTab === 'services' && (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Add New Service */}
             <section className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-md border border-indigo-500/30">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
                     <PlusIcon className="w-5 h-5 mr-2 text-indigo-500 dark:text-indigo-400"/>
@@ -350,8 +352,6 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
                     </button>
                 </form>
             </section>
-
-            {/* List Services */}
             <section className="space-y-3">
                 <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wider mb-2 ml-1">Meus Pacotes Ativos</h3>
                 {services.map(service => (
@@ -377,7 +377,6 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
             </section>
         </div>
       )}
-
       {activeTab === 'website' && (
           <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-300">
               <section className="bg-gradient-to-br from-indigo-900 to-gray-800 p-6 rounded-xl shadow-lg border border-indigo-500/30">
@@ -459,14 +458,20 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex justify-center items-center"
+                className={`w-full font-bold py-4 px-4 rounded-lg shadow-lg transition-all transform active:scale-95 flex justify-center items-center ${isSaved ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
             >
-                Salvar Site
+                {isSaved ? (
+                    <>
+                        <CheckCircleIcon className="w-6 h-6 mr-2" />
+                        Salvo com Sucesso!
+                    </>
+                ) : (
+                    "Salvar Site"
+                )}
             </button>
           </form>
       )}
-
-      {activeTab === 'scripts' && (
+       {activeTab === 'scripts' && (
           <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-300">
               <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 p-4 rounded-lg mb-6">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -509,9 +514,16 @@ const Settings: React.FC<SettingsProps> = ({ profile, onSave, onLogout, services
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition-transform transform active:scale-95 flex justify-center items-center"
+                 className={`w-full font-bold py-4 px-4 rounded-lg shadow-lg transition-all transform active:scale-95 flex justify-center items-center ${isSaved ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
             >
-                Salvar Scripts
+                {isSaved ? (
+                    <>
+                        <CheckCircleIcon className="w-6 h-6 mr-2" />
+                        Scripts Salvos!
+                    </>
+                ) : (
+                    "Salvar Scripts"
+                )}
             </button>
           </form>
       )}

@@ -16,6 +16,36 @@ export const useMockData = (userId?: string) => {
   const [kpis, setKpis] = useState<FinancialKPI[]>([]);
   const [historicalRevenue, setHistoricalRevenue] = useState<MonthlyMetric[]>([]);
 
+  // --- KPI CALCULATION EFFECT ---
+  // Automatically recalculates whenever core data changes
+  useEffect(() => {
+      const goal = businessProfile.monthlyGoal || 10000;
+      
+      // FIX: Force Number() casting to avoid string concatenation issues
+      const totalPending = transactions
+        .filter((t: any) => t.status === 'pending' || t.status === 'overdue')
+        .reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+      
+      const totalPaid = transactions
+        .filter((t: any) => t.status === 'paid')
+        .reduce((acc: number, t: any) => acc + Number(t.amount), 0);
+      
+      const activeProposalsCount = proposals.filter(p => p.status !== 'Fechada' && p.status !== 'Perdida').length;
+
+      setKpis([
+        { label: 'A Receber', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPending), change: 'Fluxo Futuro', isPositive: true },
+        { label: 'Recebido (Mês)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPaid), change: 'Caixa Realizado', isPositive: true },
+        { label: 'Propostas Ativas', value: activeProposalsCount.toString(), change: 'Em negociação', isPositive: true },
+        { label: 'Meta Mensal', value: `${Math.round((totalPaid/(goal || 1))*100)}%`, change: 'vs Meta', isPositive: true },
+      ]);
+
+      setHistoricalRevenue([
+          { month: 'Set', revenue: totalPaid * 0.8 },
+          { month: 'Out', revenue: totalPaid }
+      ]);
+  }, [transactions, proposals, businessProfile.monthlyGoal]);
+
+
   // --- FETCH DATA (HYBRID) ---
   const fetchData = async () => {
     if (!userId) return;
@@ -29,11 +59,15 @@ export const useMockData = (userId?: string) => {
             setBusinessProfile(data.profile || {});
             setProposals(data.proposals || []);
             setClients(data.clients || []);
-            setEvents(data.events?.map((e: any) => ({...e, date: new Date(e.date)})) || []);
+            
+            // Ensure events are Date objects and Sorted
+            const loadedEvents = (data.events || []).map((e: any) => ({...e, date: new Date(e.date)}));
+            loadedEvents.sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+            setEvents(loadedEvents);
+
             setTransactions(data.transactions || []);
             setServices(data.services || []);
             setSuppliers(data.suppliers || []);
-            calculateKPIs(data.proposals || [], data.transactions || [], data.profile?.monthlyGoal || 10000);
         }
         return;
     }
@@ -91,10 +125,10 @@ export const useMockData = (userId?: string) => {
         // 4. Fetch Events
         const { data: eventsData } = await supabase.from('events').select('*').order('date', { ascending: true });
         if (eventsData) {
-            setEvents(eventsData.map((e: any) => ({
+            const parsedEvents = eventsData.map((e: any) => ({
                 id: e.id,
                 title: e.title,
-                date: new Date(e.date + 'T00:00:00'),
+                date: new Date(e.date + 'T00:00:00'), // Force Timezone consistency
                 type: e.type,
                 clientName: e.client_name,
                 location: e.location,
@@ -104,7 +138,10 @@ export const useMockData = (userId?: string) => {
                 timeline: e.timeline || [],
                 costs: e.costs || [],
                 amount: e.amount
-            })));
+            }));
+            // Sort locally just to be safe
+            parsedEvents.sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+            setEvents(parsedEvents);
         }
 
         // 5. Fetch Transactions
@@ -128,28 +165,9 @@ export const useMockData = (userId?: string) => {
         const { data: supData } = await supabase.from('suppliers').select('*');
         if (supData) setSuppliers(supData);
 
-        calculateKPIs(proposalsData || [], transData || [], profileData?.monthly_goal || 10000);
-
     } catch (error) {
         console.error("Error fetching Supabase data:", error);
     }
-  };
-
-  const calculateKPIs = (props: any[], trans: any[], goal: number) => {
-      const totalPending = trans.filter((t: any) => t.status === 'pending').reduce((acc: number, t: any) => acc + t.amount, 0);
-      const totalPaid = trans.filter((t: any) => t.status === 'paid').reduce((acc: number, t: any) => acc + t.amount, 0);
-      
-      setKpis([
-        { label: 'A Receber', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPending), change: '0%', isPositive: true },
-        { label: 'Recebido (Mês)', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPaid), change: '0%', isPositive: true },
-        { label: 'Propostas Ativas', value: props.length.toString(), change: '0', isPositive: true },
-        { label: 'Meta Mensal', value: `${Math.round((totalPaid/(goal || 1))*100)}%`, change: 'vs Meta', isPositive: true },
-      ]);
-
-      setHistoricalRevenue([
-          { month: 'Set', revenue: totalPaid * 0.8 },
-          { month: 'Out', revenue: totalPaid }
-      ]);
   };
 
   // --- SAVE LOCAL HELPER ---
@@ -191,12 +209,13 @@ export const useMockData = (userId?: string) => {
           phone: client.phone,
           email: client.email
       });
-      fetchData();
+      // Force fetch to ensure ID is synced for future use
+      await fetchData();
   };
 
   // 1. PROPOSALS
   const addProposal = async (prop: Proposal) => {
-      // Check if client exists, if not create them
+      // FIX: Check if client exists, if not create them immediately and AWAIT it
       const existingClient = clients.find(c => c.name.toLowerCase() === prop.clientName.toLowerCase());
       if (!existingClient && prop.clientName) {
           await addNewClient({
@@ -267,14 +286,15 @@ export const useMockData = (userId?: string) => {
 
   // 4. TRANSACTIONS
   const updateTransStatus = async (id: string, status: string) => {
+      // Optimistic Update
+      const newTrans = transactions.map(t => t.id === id ? { ...t, status: status as any } : t);
+      setTransactions(newTrans);
+
       if (!isSupabaseConfigured) {
-          const newTrans = transactions.map(t => t.id === id ? { ...t, status: status as any } : t);
-          setTransactions(newTrans);
           saveLocal('transactions', newTrans);
           return;
       }
       await supabase.from('transactions').update({ status }).eq('id', id);
-      fetchData();
   };
 
   // 5. SUPPLIERS
@@ -312,10 +332,10 @@ export const useMockData = (userId?: string) => {
      if (!event || !event.checklist) return;
      
      const updatedChecklist = event.checklist.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
-     setEvents(prev => prev.map(e => e.id === eventId ? { ...e, checklist: updatedChecklist } : e));
+     const newEvents = events.map(e => e.id === eventId ? { ...e, checklist: updatedChecklist } : e);
+     setEvents(newEvents);
 
      if (!isSupabaseConfigured) {
-         const newEvents = events.map(e => e.id === eventId ? { ...e, checklist: updatedChecklist } : e);
          saveLocal('events', newEvents);
          return;
      }
@@ -341,7 +361,7 @@ export const useMockData = (userId?: string) => {
              if (res.length > 0) addProposal(res[0]);
         }
     }, 
-    updateProposal, // EXPORTED NOW
+    updateProposal,
     setClients: (val: any) => {
          if (typeof val === 'function') {
              const res = val([]);
@@ -372,46 +392,46 @@ export const useMockData = (userId?: string) => {
     addEventCost: async (eventId: string, cost: any) => {
         const event = events.find(e => e.id === eventId);
         const newCosts = [...(event?.costs || []), { ...cost, id: Date.now().toString() }];
+        const newEvents = events.map(e => e.id === eventId ? { ...e, costs: newCosts } : e);
+        setEvents(newEvents);
         
         if(!isSupabaseConfigured) {
-            const newEvents = events.map(e => e.id === eventId ? { ...e, costs: newCosts } : e);
-            setEvents(newEvents); saveLocal('events', newEvents); return;
+             saveLocal('events', newEvents); return;
         }
         await supabase.from('events').update({ costs: newCosts }).eq('id', eventId);
-        fetchData();
     },
     deleteEventCost: async (eventId: string, costId: string) => {
          const event = events.find(e => e.id === eventId);
          const newCosts = event?.costs?.filter(c => c.id !== costId) || [];
+         const newEvents = events.map(e => e.id === eventId ? { ...e, costs: newCosts } : e);
+         setEvents(newEvents);
          
          if(!isSupabaseConfigured) {
-            const newEvents = events.map(e => e.id === eventId ? { ...e, costs: newCosts } : e);
-            setEvents(newEvents); saveLocal('events', newEvents); return;
+            saveLocal('events', newEvents); return;
          }
          await supabase.from('events').update({ costs: newCosts }).eq('id', eventId);
-         fetchData();
     },
     addTimelineItem: async (eventId: string, item: any) => {
         const event = events.find(e => e.id === eventId);
         const newTimeline = [...(event?.timeline || []), { ...item, id: Date.now().toString() }];
+        const newEvents = events.map(e => e.id === eventId ? { ...e, timeline: newTimeline } : e);
+        setEvents(newEvents);
         
         if(!isSupabaseConfigured) {
-            const newEvents = events.map(e => e.id === eventId ? { ...e, timeline: newTimeline } : e);
-            setEvents(newEvents); saveLocal('events', newEvents); return;
+            saveLocal('events', newEvents); return;
         }
         await supabase.from('events').update({ timeline: newTimeline }).eq('id', eventId);
-        fetchData();
     },
     deleteTimelineItem: async (eventId: string, itemId: string) => {
          const event = events.find(e => e.id === eventId);
          const newTimeline = event?.timeline?.filter(t => t.id !== itemId) || [];
+         const newEvents = events.map(e => e.id === eventId ? { ...e, timeline: newTimeline } : e);
+         setEvents(newEvents);
          
          if(!isSupabaseConfigured) {
-            const newEvents = events.map(e => e.id === eventId ? { ...e, timeline: newTimeline } : e);
-            setEvents(newEvents); saveLocal('events', newEvents); return;
+            saveLocal('events', newEvents); return;
          }
          await supabase.from('events').update({ timeline: newTimeline }).eq('id', eventId);
-         fetchData();
     }
   };
 };

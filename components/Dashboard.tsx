@@ -65,6 +65,13 @@ const Dashboard: React.FC<DashboardProps> = ({ kpis, events, onEventClick, onMag
           setIsProcessing(false);
       }
   };
+  
+  // Filter events to only show future ones (or today)
+  const upcomingEvents = events.filter(e => {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      return e.date >= today;
+  }).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -106,19 +113,21 @@ const Dashboard: React.FC<DashboardProps> = ({ kpis, events, onEventClick, onMag
       <section>
         <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white px-1">Visão Geral Financeira</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {kpis.map(kpi => <KPICard key={kpi.label} kpi={kpi} privacyMode={privacyMode} />)}
+          {kpis.length > 0 ? kpis.map(kpi => <KPICard key={kpi.label} kpi={kpi} privacyMode={privacyMode} />) : (
+              <div className="col-span-full text-center text-gray-400 py-4 italic">Carregando dados financeiros...</div>
+          )}
         </div>
       </section>
       
       <section>
         <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white px-1">Próximos Eventos</h2>
         <ul className="space-y-3">
-          {events.slice(0, 4).map(event => (
+          {upcomingEvents.map(event => (
             <EventItem key={event.id} event={event} onClick={() => onEventClick(event)} />
           ))}
-          {events.length === 0 && (
+          {upcomingEvents.length === 0 && (
               <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhum evento próximo.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhum evento próximo encontrado.</p>
               </div>
           )}
         </ul>

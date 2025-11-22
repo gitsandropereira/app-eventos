@@ -139,7 +139,11 @@ const App: React.FC = () => {
   const handleLogout = async () => {
       try {
         await authService.logout();
-      } finally {
+        setUser(null);
+        // Force reload to ensure clean state
+        window.location.href = '/'; 
+      } catch (error) {
+        console.error("Logout failed", error);
         setUser(null);
       }
   };
@@ -155,13 +159,14 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
+      // FIX: Pass allScheduledEvents to Dashboard so it shows Closed Proposals
+      case 'dashboard': return <Dashboard kpis={kpis} events={allScheduledEvents} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
       case 'proposals': return <Proposals initialProposals={proposals} onAddProposal={addProposal} onUpdateProposal={updateProposal} businessProfile={businessProfile} draftProposal={draftProposal} onClearDraft={() => setDraftProposal(undefined)} existingEvents={allScheduledEvents} privacyMode={privacyMode} services={services} />;
       case 'agenda': return <Agenda events={allScheduledEvents} onEventClick={handleEventClick} />;
       case 'clients': return <Clients clients={clients} onAddClient={addClient} suppliers={suppliers} onAddSupplier={addSupplier} onDeleteSupplier={deleteSupplier} />;
       case 'finance': return <Finance transactions={transactions} onUpdateStatus={updateTransactionStatus} historicalData={historicalRevenue} businessProfile={businessProfile} onUpdateGoal={updateMonthlyGoal} privacyMode={privacyMode} />;
       case 'settings': return <Settings profile={businessProfile} onSave={setBusinessProfile} onLogout={handleLogout} services={services} onAddService={addService} onDeleteService={deleteService} />;
-      default: return <Dashboard kpis={kpis} events={events} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
+      default: return <Dashboard kpis={kpis} events={allScheduledEvents} onEventClick={handleEventClick} onMagicCreate={handleMagicCreate} privacyMode={privacyMode} />;
     }
   };
 

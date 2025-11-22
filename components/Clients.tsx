@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Client, Supplier } from '../types';
-import { SearchIcon, PlusIcon, BriefcaseIcon, CalendarIcon, TruckIcon, UsersIcon, TrashIcon } from './icons';
+import { SearchIcon, PlusIcon, BriefcaseIcon, CalendarIcon, TruckIcon, UsersIcon, TrashIcon, XCircleIcon } from './icons';
 
 interface ClientsProps {
   clients: Client[];
@@ -17,6 +17,7 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
   // Client Form State
   const [newClientName, setNewClientName] = useState('');
@@ -27,6 +28,18 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
   const [newSupplierName, setNewSupplierName] = useState('');
   const [newSupplierPhone, setNewSupplierPhone] = useState('');
   const [newSupplierCategory, setNewSupplierCategory] = useState('Equipe');
+
+  const formatPhone = (value: string) => {
+      // Remove non-numeric chars
+      const nums = value.replace(/\D/g, '');
+      if (nums.length <= 2) return nums;
+      if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+      return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7, 11)}`;
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+      setter(formatPhone(e.target.value));
+  };
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,7 +175,10 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
                             {client.events}
                         </div>
                     </div>
-                    <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium transition-colors">
+                    <button 
+                        onClick={() => setSelectedClient(client)}
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium transition-colors"
+                    >
                         Ver Detalhes
                     </button>
                 </div>
@@ -243,9 +259,10 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
                     type="tel"
                     required
                     value={newClientPhone}
-                    onChange={(e) => setNewClientPhone(e.target.value)}
+                    onChange={(e) => handlePhoneChange(e, setNewClientPhone)}
                     className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     />
                 </div>
                 <div>
@@ -307,9 +324,10 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
                     type="tel"
                     required
                     value={newSupplierPhone}
-                    onChange={(e) => setNewSupplierPhone(e.target.value)}
+                    onChange={(e) => handlePhoneChange(e, setNewSupplierPhone)}
                     className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
@@ -331,6 +349,44 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, suppliers, onAd
             )}
           </div>
         </div>
+      )}
+
+       {/* Client Detail Modal */}
+       {selectedClient && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <div className="relative h-24 bg-gradient-to-r from-indigo-500 to-purple-600">
+                      <button onClick={() => setSelectedClient(null)} className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/20 rounded-full p-1">
+                          <XCircleIcon className="w-6 h-6" />
+                      </button>
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                          <div className={`h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-2xl ${getRandomColor(selectedClient.name)} border-4 border-white dark:border-gray-800 shadow-md`}>
+                                {getInitials(selectedClient.name)}
+                          </div>
+                      </div>
+                  </div>
+                  <div className="pt-10 pb-6 px-6 text-center">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{selectedClient.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{selectedClient.phone}</p>
+                      {selectedClient.email && <p className="text-sm text-gray-500 dark:text-gray-400">{selectedClient.email}</p>}
+
+                      <div className="mt-6 grid grid-cols-2 gap-4">
+                           <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                               <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{selectedClient.proposals}</p>
+                               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Propostas</p>
+                           </div>
+                           <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                               <p className="text-2xl font-bold text-green-600 dark:text-green-400">{selectedClient.events}</p>
+                               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Eventos</p>
+                           </div>
+                      </div>
+                      
+                      <a href={`https://wa.me/55${selectedClient.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-500/30 transition-transform active:scale-95 flex items-center justify-center">
+                           Iniciar Conversa
+                      </a>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );
